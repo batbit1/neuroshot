@@ -1,5 +1,5 @@
 import type { GenerationRecord } from "@/types";
-import { STORAGE_RESULTS } from "@/lib/storage-keys";
+import { STORAGE_RESULTS, STORAGE_SESSION_RESULTS } from "@/lib/storage-keys";
 
 type ResultMap = Record<string, GenerationRecord>;
 
@@ -30,7 +30,58 @@ function loadMap(): ResultMap {
   }
 }
 
+function loadSessionMap(): ResultMap {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = sessionStorage.getItem(STORAGE_SESSION_RESULTS);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as ResultMap;
+    const out: ResultMap = {};
+    for (const key of Object.keys(parsed)) {
+      const r = parsed[key];
+      if (r && typeof r === "object" && "id" in r) {
+        out[key] = normalizeRecord(r as GenerationRecord);
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** Полная запись с картинкой — только sessionStorage; при переполнении оставляем одну запись. */
+function saveFullRecordToSession(record: GenerationRecord) {
+  if (typeof window === "undefined") return;
+  const full = normalizeRecord({ ...record });
+  const map = loadSessionMap();
+  map[record.id] = full;
+  try {
+    sessionStorage.setItem(STORAGE_SESSION_RESULTS, JSON.stringify(map));
+  } catch {
+    try {
+      sessionStorage.setItem(
+        STORAGE_SESSION_RESULTS,
+        JSON.stringify({ [record.id]: full }),
+      );
+    } catch {
+      /* лимит session — без полного imageSrc на этой вкладке */
+    }
+  }
+}
+
+function mergeSessionImage(
+  local: GenerationRecord,
+  sessionMap: ResultMap,
+): GenerationRecord {
+  const s = sessionMap[local.id];
+  const imageSrc =
+    s?.imageSrc && s.imageSrc.length > 0 ? s.imageSrc : local.imageSrc;
+  return normalizeRecord({ ...local, imageSrc });
+}
+
 export function saveGenerationResult(record: GenerationRecord) {
+  saveFullRecordToSession(record);
+
   const map = loadMap();
   const imageSrc = isBase64Image(record.imageSrc) ? "" : record.imageSrc;
   const toSave = normalizeRecord({
@@ -43,8 +94,12 @@ export function saveGenerationResult(record: GenerationRecord) {
 }
 
 export function getGenerationResult(id: string): GenerationRecord | undefined {
-  const r = loadMap()[id];
-  return r ? normalizeRecord(r) : undefined;
+  const local = loadMap()[id];
+  const sessionMap = loadSessionMap();
+  const sessionRec = sessionMap[id];
+  if (!local && !sessionRec) return undefined;
+  if (!local) return normalizeRecord(sessionRec!);
+  return mergeSessionImage(local, sessionMap);
 }
 
 export function setGenerationFavorite(id: string, isFavorite: boolean) {
@@ -58,7 +113,9 @@ export function setGenerationFavorite(id: string, isFavorite: boolean) {
 export function getFavoriteGenerationResultsByUser(
   userId: string,
 ): GenerationRecord[] {
+  const sessionMap = loadSessionMap();
   return Object.values(loadMap())
     .filter((r) => r.userId === userId && r.isFavorite)
+    .map((r) => mergeSessionImage(r, sessionMap))
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
