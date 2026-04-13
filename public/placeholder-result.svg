@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640" role="img" aria-label="03;CH:0 @57C;LB0B0">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="640" fill="url(#g)"/>
+  <text x="50%" y="46%" dominant-baseline="middle" text-anchor="middle" fill="#475569" font-family="system-ui,sans-serif" font-size="28" font-weight="600"> 57C;LB0B (703;CH:0)</text>
+  <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-family="system-ui,sans-serif" font-size="16">>4:;NG8B5 AI API ?>765</text>
+</svg>
