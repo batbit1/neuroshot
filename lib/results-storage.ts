@@ -3,6 +3,10 @@ import { STORAGE_RESULTS } from "@/lib/storage-keys";
 
 type ResultMap = Record<string, GenerationRecord>;
 
+export function isBase64Image(src: string): boolean {
+  return src.startsWith("data:image");
+}
+
 function normalizeRecord(raw: GenerationRecord): GenerationRecord {
   return { ...raw, isFavorite: Boolean(raw.isFavorite) };
 }
@@ -28,8 +32,10 @@ function loadMap(): ResultMap {
 
 export function saveGenerationResult(record: GenerationRecord) {
   const map = loadMap();
+  const imageSrc = isBase64Image(record.imageSrc) ? "" : record.imageSrc;
   const toSave = normalizeRecord({
     ...record,
+    imageSrc,
     isFavorite: Boolean(record.isFavorite),
   });
   map[record.id] = toSave;
